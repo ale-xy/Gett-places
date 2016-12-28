@@ -18,6 +18,8 @@ import com.google.maps.model.AddressType;
 import com.google.maps.model.AutocompletePrediction;
 import com.google.maps.model.Distance;
 import com.google.maps.model.Duration;
+import com.google.maps.model.GeocodingResult;
+import com.google.maps.model.LatLng;
 import com.google.maps.model.LocationType;
 import com.google.maps.model.PlacesSearchResult;
 import com.google.maps.model.TravelMode;
@@ -25,8 +27,9 @@ import com.google.maps.model.TravelMode;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
-import java.util.List;
 
+import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -37,25 +40,13 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * Created by alexeykrichun on 26/12/2016.
  */
 
-public class GooglePlacesApi {
-    private static final String BASE_URL = "https://maps.googleapis.com/maps/api";
+public class GooglePlacesApi implements PlacesApi {
+    private static final String BASE_URL = "https://maps.googleapis.com/maps/api/";
 
     private final String googleMapsKey;
 
     private final Retrofit retrofit;
     private final RetrofitMapsApi mapsApi;
-
-    public interface GetNearbyPlacesCallback {
-        void nearbyPlacesResult(List<Place> places);
-    }
-
-    public interface GetPlaceDetailsCallback {
-        void placeDetailsResult(Place place);
-    }
-
-    public interface GetAutocompleteCallback {
-        void autocompleteResult(List<AutocompleteResult> places);
-    }
 
     public GooglePlacesApi(String googleMapsKey) {
         this.googleMapsKey = googleMapsKey;
@@ -72,15 +63,21 @@ public class GooglePlacesApi {
                 .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
                 .create();
 
+        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
+
         retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(client)
                 .build();
 
         mapsApi = retrofit.create(RetrofitMapsApi.class);
 
     }
 
+    @Override
     public void getNearbyPlaces(double lat, double lon, int radius, final GetNearbyPlacesCallback callback) {
         String location = String.valueOf(lat) + "," + String.valueOf(lon);
 
@@ -103,10 +100,21 @@ public class GooglePlacesApi {
         });
     }
 
+    @Override
     public void getPlaceDetails(String placeId, final GetPlaceDetailsCallback callback) {
         mapsApi.getPlaceDetails(googleMapsKey, placeId).enqueue(new Callback<NearbySearchRequest.Response>() {
             @Override
             public void onResponse(Call<NearbySearchRequest.Response> call, Response<NearbySearchRequest.Response> response) {
+                if (response.body().results.length > 0) {
+                    PlacesSearchResult placesSearchResult = response.body().results[0];
+                    LatLng location = placesSearchResult.geometry.location;
+                    String address = placesSearchResult.formattedAddress;
+                    String id = placesSearchResult.placeId;
+                    String name = placesSearchResult.name;
+                    Place result = new Place(location.lat, location.lng, id, name, address);
+                    callback.placeDetailsResult(result);
+                }
+                //todo not found
 
             }
 
@@ -117,6 +125,7 @@ public class GooglePlacesApi {
         });
     }
 
+    @Override
     public void getAutocompletePredictions(String input, final GetAutocompleteCallback callback) {
         mapsApi.getAutocompletePredictions(googleMapsKey, input).enqueue(new Callback<PlaceAutocompleteRequest.Response>() {
             @Override
@@ -133,6 +142,30 @@ public class GooglePlacesApi {
 
             @Override
             public void onFailure(Call<PlaceAutocompleteRequest.Response> call, Throwable t) {
+                Log.e("GooglePlacesApi", t.getLocalizedMessage());
+            }
+        });
+    }
+
+    @Override
+    public void getReverseGeocoding(double lat, double lon, final ReverseGeocodingCallback callback) {
+        String location = String.valueOf(lat) + "," + String.valueOf(lon);
+        mapsApi.reverseGeocoding(googleMapsKey, location).enqueue(new Callback<GeocodingApiResponse>() {
+            @Override
+            public void onResponse(Call<GeocodingApiResponse> call, Response<GeocodingApiResponse> response) {
+                if (response.body().results.length > 0) {
+                    GeocodingResult geocodingResult = response.body().results[0];
+                    LatLng location = geocodingResult.geometry.location;
+                    String address = geocodingResult.formattedAddress;
+                    String id = geocodingResult.placeId;
+                    Place result = new Place(location.lat, location.lng, id, address, address);
+
+                    callback.reverseGeocodingResult(result);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<GeocodingApiResponse> call, Throwable t) {
                 Log.e("GooglePlacesApi", t.getLocalizedMessage());
             }
         });

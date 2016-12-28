@@ -8,7 +8,36 @@ import java.util.List;
 
 public class PlacesModel {
     private Place currentPlace;
-    private double radius;
+    private int radius;
     private List<Place> places;
 
+    public Place getCurrentPlace() {
+        return currentPlace;
+    }
+
+    public void setCurrentPlace(Place currentPlace) {
+        this.currentPlace = currentPlace;
+    }
+
+    public int getRadius() {
+        return radius;
+    }
+
+    public void setRadius(int radius) {
+        this.radius = radius;
+    }
+
+    public List<Place> getPlaces() {
+        return places;
+    }
+
+    public void setPlaces(List<Place> places) {
+        this.places = places;
+    }
+
+    public void clearPlaces() {
+        if(places != null) {
+            places.clear();
+        }
+    }
 }

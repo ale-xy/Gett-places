@@ -1,6 +1,8 @@
 package com.example.alexeykrichun.gett_places;
 
+import com.example.alexeykrichun.gett_places.model.AutocompleteResult;
 import com.example.alexeykrichun.gett_places.model.Place;
+import com.example.alexeykrichun.gett_places.model.PlacesModel;
 
 import java.util.List;
 
@@ -10,16 +12,18 @@ import java.util.List;
 
 public interface PlacesViewContract {
     interface View {
-        void showAutocompleteResults(List<String> results);
-        void showAddress(Place place);
-        void showPlaces(List<Place> places);
+        void showAutocompleteResults(List<AutocompleteResult> results);
+        void updateMap(PlacesModel placesModel);
         void showLoading(boolean show);
     }
 
     interface Presenter {
+        void setCurrentPlace(Place place);
+        void setRadius(int radius);
         void getAutocompleteSuggestions(String text);
-        void getReverseGeocoding(double lat, double lon);
-        void getNearbyPlaces(Place base, int radius);
+        void selectPlaceFromCoords(double lat, double lon);
+        void selectPlaceFromAutocomplete(String placeId);
+        void getPlaceDetails(String placeId);
     }
 
 }

@@ -13,40 +13,65 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.widget.ArrayAdapter;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 
 import com.example.alexeykrichun.gett_places.R;
+import com.example.alexeykrichun.gett_places.di.DaggerPlacesAppComponent;
+import com.example.alexeykrichun.gett_places.di.PlacesAppComponent;
+import com.example.alexeykrichun.gett_places.di.PlacesAppModule;
+import com.example.alexeykrichun.gett_places.model.AutocompleteResult;
 import com.example.alexeykrichun.gett_places.model.Place;
 import com.example.alexeykrichun.gett_places.PlacesViewContract;
+import com.example.alexeykrichun.gett_places.model.PlacesModel;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
+
+import javax.inject.Inject;
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback, PlacesViewContract.View, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private static final String LOG_TAG = "MapActivity";
     private static final int REQUEST_CODE_LOCATION_PERMISSION = 9000;
 
+    private PlacesViewContract.Presenter presenter;
+
     private GoogleMap googleMap;
+
     private AutoCompleteTextView autoCompleteTextView;
 
     private GoogleApiClient googleApiClient;
 
-    private PlacesViewContract.Presenter presenter;
+    private AutocompleteArrayAdapter autocompleteListAdapter;
 
-    private ArrayAdapter<String> autocompleteListAdapter;
-
-    private int radius = 10; //todo add control
+    private int radius = 1000; //todo add control
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        String googleMapsKey = getResources().getString(R.string.google_maps_key);
+        PlacesAppComponent component = DaggerPlacesAppComponent.builder().
+                placesAppModule(new PlacesAppModule(googleMapsKey, this)).
+                build();
+
+        presenter = component.getPresenter();
+        presenter.setRadius(radius);
+
         setContentView(R.layout.activity_map);
 
         setupGoogleApiClient();
@@ -54,22 +79,34 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
         autoCompleteTextView = (AutoCompleteTextView) findViewById(R.id.address_autocomplete);
-        autocompleteListAdapter = new ArrayAdapter<String>(this, R.layout.autocomplete_item);
-        autoCompleteTextView.addTextChangedListener(new TextWatcher() {
+        autocompleteListAdapter = new AutocompleteArrayAdapter(this);
+        autocompleteListAdapter.setNotifyOnChange(true);
+//        autoCompleteTextView.addTextChangedListener(new TextWatcher() {
+//            @Override
+//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//
+//            }
+//
+//            @Override
+//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//                if (charSequence.length() >= 3) {
+//                    presenter.getAutocompleteSuggestions(charSequence.toString());
+//                }
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable editable) {
+//
+//            }
+//        });
+
+        autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                presenter.getAutocompleteSuggestions(charSequence.toString());
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                AutocompleteResult result = autocompleteListAdapter.getItem(i);
+                presenter.selectPlaceFromAutocomplete(result.placeId);
             }
         });
     }
@@ -115,13 +152,19 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 Log.e(LOG_TAG, "Location permission error " + e.getMessage());
             }
         }
+        googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+            @Override
+            public void onMapClick(LatLng latLng) {
+                presenter.selectPlaceFromCoords(latLng.latitude, latLng.longitude);
+            }
+        });
     }
 
     private void getCurrentLocationAddress() {
         try {
             Location location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
             if (location != null) {
-                presenter.getReverseGeocoding(location.getLatitude(), location.getLongitude());
+                presenter.selectPlaceFromCoords(location.getLatitude(), location.getLongitude());
             }
         } catch (SecurityException e) {
             Log.e(LOG_TAG, "Location permission error " + e.getMessage());
@@ -147,24 +190,47 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     }
 
     @Override
-    public void showAutocompleteResults(List<String> results) {
+    public void showAutocompleteResults(List<AutocompleteResult> results) {
         autocompleteListAdapter.clear();
         autocompleteListAdapter.addAll(results);
         autoCompleteTextView.showDropDown();
     }
 
     @Override
-    public void showAddress(Place place) {
+    public void updateMap(@NonNull PlacesModel placesModel) {
         autocompleteListAdapter.clear();
-        autoCompleteTextView.setText(place.name, false);
+        Place currentPlace = placesModel.getCurrentPlace();
+        autoCompleteTextView.setText(currentPlace.name, false);
 
-        //todo set new marker
-        presenter.getNearbyPlaces(place, radius);
-    }
+        googleMap.clear();
 
-    @Override
-    public void showPlaces(List<Place> places) {
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
 
+        List<Place> places = placesModel.getPlaces();
+
+        for (Place place:places) {
+            LatLng latLng = new LatLng(place.lat, place.lon);
+
+            builder.include(latLng);
+
+            MarkerOptions markerOptions = new MarkerOptions().
+                    position(latLng).
+                    icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE));
+
+            googleMap.addMarker(markerOptions);
+        }
+
+        LatLng latLng = new LatLng(currentPlace.lat, currentPlace.lon);
+        builder.include(latLng);
+
+        MarkerOptions markerOptions = new MarkerOptions().
+                position(latLng).
+                icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+
+        googleMap.addMarker(markerOptions);
+
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
+        googleMap.animateCamera(cameraUpdate);
     }
 
     @Override
