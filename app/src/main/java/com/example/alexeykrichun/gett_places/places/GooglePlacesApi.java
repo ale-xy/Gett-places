@@ -1,5 +1,6 @@
 package com.example.alexeykrichun.gett_places.places;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.example.alexeykrichun.gett_places.model.AutocompleteResult;
@@ -21,12 +22,15 @@ import com.google.maps.model.Duration;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
 import com.google.maps.model.LocationType;
+import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlacesSearchResult;
 import com.google.maps.model.TravelMode;
 
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -45,7 +49,6 @@ public class GooglePlacesApi implements PlacesApi {
 
     private final String googleMapsKey;
 
-    private final Retrofit retrofit;
     private final RetrofitMapsApi mapsApi;
 
     public GooglePlacesApi(String googleMapsKey) {
@@ -56,10 +59,10 @@ public class GooglePlacesApi implements PlacesApi {
                 .registerTypeAdapter(Distance.class, new DistanceAdapter())
                 .registerTypeAdapter(Duration.class, new DurationAdapter())
                 .registerTypeAdapter(AddressComponentType.class,
-                        new SafeEnumAdapter<AddressComponentType>(AddressComponentType.UNKNOWN))
-                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<AddressType>(AddressType.UNKNOWN))
-                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<TravelMode>(TravelMode.UNKNOWN))
-                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<LocationType>(LocationType.UNKNOWN))
+                        new SafeEnumAdapter<>(AddressComponentType.UNKNOWN))
+                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<>(AddressType.UNKNOWN))
+                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<>(TravelMode.UNKNOWN))
+                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<>(LocationType.UNKNOWN))
                 .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
                 .create();
 
@@ -67,7 +70,7 @@ public class GooglePlacesApi implements PlacesApi {
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
 
-        retrofit = new Retrofit.Builder()
+        Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .client(client)
@@ -84,7 +87,7 @@ public class GooglePlacesApi implements PlacesApi {
         mapsApi.getNearbyPlaces(googleMapsKey, location, radius).enqueue(new Callback<NearbySearchRequest.Response>() {
             @Override
             public void onResponse(Call<NearbySearchRequest.Response> call, Response<NearbySearchRequest.Response> response) {
-                ArrayList<Place> places = new ArrayList<Place>(response.body().results.length);
+                ArrayList<Place> places = new ArrayList<>(response.body().results.length);
 
                 for(PlacesSearchResult result:response.body().results) {
                     Place place = new Place(result.geometry.location.lat, result.geometry.location.lng, result.placeId, result.name, result.formattedAddress);
@@ -102,11 +105,11 @@ public class GooglePlacesApi implements PlacesApi {
 
     @Override
     public void getPlaceDetails(String placeId, final GetPlaceDetailsCallback callback) {
-        mapsApi.getPlaceDetails(googleMapsKey, placeId).enqueue(new Callback<NearbySearchRequest.Response>() {
+        mapsApi.getPlaceDetails(googleMapsKey, placeId).enqueue(new Callback<PlaceDetailsResponse>() {
             @Override
-            public void onResponse(Call<NearbySearchRequest.Response> call, Response<NearbySearchRequest.Response> response) {
-                if (response.body().results.length > 0) {
-                    PlacesSearchResult placesSearchResult = response.body().results[0];
+            public void onResponse(Call<PlaceDetailsResponse> call, Response<PlaceDetailsResponse> response) {
+                if (response.isSuccessful() && response.body().result != null) {
+                    PlaceDetails placesSearchResult = response.body().result;
                     LatLng location = placesSearchResult.geometry.location;
                     String address = placesSearchResult.formattedAddress;
                     String id = placesSearchResult.placeId;
@@ -119,32 +122,33 @@ public class GooglePlacesApi implements PlacesApi {
             }
 
             @Override
-            public void onFailure(Call<NearbySearchRequest.Response> call, Throwable t) {
+            public void onFailure(Call<PlaceDetailsResponse> call, Throwable t) {
                 Log.e("GooglePlacesApi", t.getLocalizedMessage());
             }
         });
     }
 
     @Override
-    public void getAutocompletePredictions(String input, final GetAutocompleteCallback callback) {
-        mapsApi.getAutocompletePredictions(googleMapsKey, input).enqueue(new Callback<PlaceAutocompleteRequest.Response>() {
-            @Override
-            public void onResponse(Call<PlaceAutocompleteRequest.Response> call, Response<PlaceAutocompleteRequest.Response> response) {
-                ArrayList<AutocompleteResult> results = new ArrayList<AutocompleteResult>(response.body().predictions.length);
+    public List<AutocompleteResult> getAutocompletePredictionsSync(String input) {
+        try {
+            Response<PlaceAutocompleteRequest.Response> response = mapsApi.getAutocompletePredictions(googleMapsKey, input).execute();
+            ArrayList<AutocompleteResult> results = parseAutocompleteResults(response);
+            return results;
+        } catch (IOException e) {
+            Log.e("GooglePlacesApi", e.getLocalizedMessage());
+        }
+        return null;
+    }
 
-                for(AutocompletePrediction prediction:response.body().predictions) {
-                    AutocompleteResult result = new AutocompleteResult(prediction.description, prediction.placeId);
-                    results.add(result);
-                }
+    @NonNull
+    private ArrayList<AutocompleteResult> parseAutocompleteResults(Response<PlaceAutocompleteRequest.Response> response) {
+        ArrayList<AutocompleteResult> results = new ArrayList<>(response.body().predictions.length);
 
-                callback.autocompleteResult(results);
-            }
-
-            @Override
-            public void onFailure(Call<PlaceAutocompleteRequest.Response> call, Throwable t) {
-                Log.e("GooglePlacesApi", t.getLocalizedMessage());
-            }
-        });
+        for(AutocompletePrediction prediction:response.body().predictions) {
+            AutocompleteResult result = new AutocompleteResult(prediction.description, prediction.placeId);
+            results.add(result);
+        }
+        return results;
     }
 
     @Override

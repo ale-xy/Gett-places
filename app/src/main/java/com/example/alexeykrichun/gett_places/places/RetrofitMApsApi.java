@@ -1,13 +1,8 @@
 package com.example.alexeykrichun.gett_places.places;
 
-import com.google.maps.GeocodingApi;
-import com.google.maps.GeocodingApiRequest;
 import com.google.maps.NearbySearchRequest;
 import com.google.maps.PlaceAutocompleteRequest;
-import com.google.maps.model.AutocompletePrediction;
-import com.google.maps.model.GeocodingResult;
-
-import java.util.List;
+import com.google.maps.PlaceDetailsRequest;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
@@ -24,8 +19,8 @@ public interface RetrofitMapsApi {
                                                        @Query("radius") int radius);
 
     @GET("place/details/json?sensor=true")
-    Call<NearbySearchRequest.Response> getPlaceDetails(@Query("key") String key,
-                                                       @Query("placeid") String placeId);
+    Call<PlaceDetailsResponse> getPlaceDetails(@Query("key") String key,
+                                              @Query("placeid") String placeId);
 
     @GET("place/autocomplete/json?types=address")
     Call<PlaceAutocompleteRequest.Response> getAutocompletePredictions(@Query("key") String key, @Query("input") String input);

@@ -14,7 +14,7 @@ import java.util.List;
  */
 
 public class PlacesPresenter implements PlacesViewContract.Presenter {
-    private PlacesViewContract.View view;
+    private final PlacesViewContract.View view;
     private final PlacesApi placesApi;
 
     private final PlacesModel placesModel;
@@ -28,20 +28,17 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
     }
 
     @Override
-    public void getAutocompleteSuggestions(String text) {
-        placesApi.getAutocompletePredictions(text, new PlacesApi.GetAutocompleteCallback() {
-            @Override
-            public void autocompleteResult(List<AutocompleteResult> places) {
-                view.showAutocompleteResults(places);
-            }
-        });
+    public List<AutocompleteResult> getAutocompleteSuggesionsSync(String text) {
+        return placesApi.getAutocompletePredictionsSync(text);
     }
 
     @Override
     public void selectPlaceFromCoords(double lat, double lon) {
+        view.showLoading(true);
         placesApi.getReverseGeocoding(lat, lon, new PlacesApi.ReverseGeocodingCallback() {
             @Override
             public void reverseGeocodingResult(Place place) {
+                view.showLoading(false);
                 placesModel.clearPlaces();
                 placesModel.setCurrentPlace(place);
                 view.updateMap(placesModel);
@@ -51,12 +48,14 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
     }
 
     private void getNearbyPlaces() {
+        view.showLoading(true);
         placesApi.getNearbyPlaces(placesModel.getCurrentPlace().lat,
                 placesModel.getCurrentPlace().lon,
                 placesModel.getRadius(),
                 new PlacesApi.GetNearbyPlacesCallback() {
             @Override
             public void nearbyPlacesResult(List<Place> places) {
+                view.showLoading(false);
                 placesModel.setPlaces(places);
                 view.updateMap(placesModel);
             }
@@ -65,9 +64,11 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
 
     @Override
     public void getPlaceDetails(String placeId) {
+        view.showLoading(true);
         placesApi.getPlaceDetails(placeId, new PlacesApi.GetPlaceDetailsCallback() {
             @Override
             public void placeDetailsResult(Place place) {
+                view.showLoading(false);
                 //todo show place details
             }
         });
@@ -91,9 +92,11 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
 
     @Override
     public void selectPlaceFromAutocomplete(String placeId) {
+        view.showLoading(true);
         placesApi.getPlaceDetails(placeId, new PlacesApi.GetPlaceDetailsCallback() {
             @Override
             public void placeDetailsResult(Place place) {
+                view.showLoading(false);
                 placesModel.clearPlaces();
                 placesModel.setCurrentPlace(place);
                 view.updateMap(placesModel);

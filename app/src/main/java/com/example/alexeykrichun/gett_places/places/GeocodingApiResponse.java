@@ -1,7 +1,6 @@
 package com.example.alexeykrichun.gett_places.places;
 
 import com.google.maps.errors.ApiException;
-import com.google.maps.internal.ApiResponse;
 import com.google.maps.model.GeocodingResult;
 
 /**

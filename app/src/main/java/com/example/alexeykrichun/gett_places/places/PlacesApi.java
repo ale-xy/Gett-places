@@ -11,19 +11,19 @@ import java.util.List;
 public interface PlacesApi {
 
 
-    public interface GetNearbyPlacesCallback {
+    interface GetNearbyPlacesCallback {
         void nearbyPlacesResult(List<Place> places);
     }
 
-    public interface GetPlaceDetailsCallback {
+    interface GetPlaceDetailsCallback {
         void placeDetailsResult(Place place);
     }
 
-    public interface GetAutocompleteCallback {
+    interface GetAutocompleteCallback {
         void autocompleteResult(List<AutocompleteResult> places);
     }
 
-    public interface ReverseGeocodingCallback {
+    interface ReverseGeocodingCallback {
         void reverseGeocodingResult(Place place);
     }
 
@@ -31,7 +31,7 @@ public interface PlacesApi {
 
     void getPlaceDetails(String placeId, GetPlaceDetailsCallback callback);
 
-    void getAutocompletePredictions(String input, GetAutocompleteCallback callback);
+    List<AutocompleteResult> getAutocompletePredictionsSync(String input);
 
     void getReverseGeocoding(double lat, double lon, ReverseGeocodingCallback callback);
 }

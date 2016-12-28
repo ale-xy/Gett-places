@@ -12,7 +12,6 @@ import java.util.List;
 
 public interface PlacesViewContract {
     interface View {
-        void showAutocompleteResults(List<AutocompleteResult> results);
         void updateMap(PlacesModel placesModel);
         void showLoading(boolean show);
     }
@@ -20,7 +19,7 @@ public interface PlacesViewContract {
     interface Presenter {
         void setCurrentPlace(Place place);
         void setRadius(int radius);
-        void getAutocompleteSuggestions(String text);
+        List<AutocompleteResult> getAutocompleteSuggesionsSync(String text);
         void selectPlaceFromCoords(double lat, double lon);
         void selectPlaceFromAutocomplete(String placeId);
         void getPlaceDetails(String placeId);

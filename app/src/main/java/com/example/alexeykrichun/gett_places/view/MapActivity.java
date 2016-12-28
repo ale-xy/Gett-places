@@ -1,6 +1,7 @@
 package com.example.alexeykrichun.gett_places.view;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -14,8 +15,11 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
+import android.widget.ProgressBar;
 
 import com.example.alexeykrichun.gett_places.R;
 import com.example.alexeykrichun.gett_places.di.DaggerPlacesAppComponent;
@@ -41,8 +45,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.util.List;
 
-import javax.inject.Inject;
-
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback, PlacesViewContract.View, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     private static final String LOG_TAG = "MapActivity";
@@ -51,8 +53,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     private PlacesViewContract.Presenter presenter;
 
     private GoogleMap googleMap;
-
     private AutoCompleteTextView autoCompleteTextView;
+    private ProgressBar progressBar;
 
     private GoogleApiClient googleApiClient;
 
@@ -81,34 +83,24 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         mapFragment.getMapAsync(this);
 
         autoCompleteTextView = (AutoCompleteTextView) findViewById(R.id.address_autocomplete);
-        autocompleteListAdapter = new AutocompleteArrayAdapter(this);
+        autocompleteListAdapter = new AutocompleteArrayAdapter(this, presenter);
         autocompleteListAdapter.setNotifyOnChange(true);
-//        autoCompleteTextView.addTextChangedListener(new TextWatcher() {
-//            @Override
-//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-//
-//            }
-//
-//            @Override
-//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-//                if (charSequence.length() >= 3) {
-//                    presenter.getAutocompleteSuggestions(charSequence.toString());
-//                }
-//            }
-//
-//            @Override
-//            public void afterTextChanged(Editable editable) {
-//
-//            }
-//        });
+        autoCompleteTextView.setAdapter(autocompleteListAdapter);
 
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                inputMethodManager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+
                 AutocompleteResult result = autocompleteListAdapter.getItem(i);
-                presenter.selectPlaceFromAutocomplete(result.placeId);
+                if (result != null) {
+                    presenter.selectPlaceFromAutocomplete(result.placeId);
+                }
             }
         });
+
+        progressBar = (ProgressBar)findViewById(R.id.progress);
     }
 
     private void setupGoogleApiClient() {
@@ -131,7 +123,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 permissions[1] = Manifest.permission.ACCESS_COARSE_LOCATION;
                 requestPermissions(permissions, REQUEST_CODE_LOCATION_PERMISSION);
             }
-            return;
         } else {
             initMap(true);
         }
@@ -152,6 +143,17 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 Log.e(LOG_TAG, "Location permission error " + e.getMessage());
             }
         }
+
+        googleMap.getUiSettings().setMapToolbarEnabled(false);
+
+        googleMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                marker.showInfoWindow();
+                return false;
+            }
+        });
+
         googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -190,17 +192,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     }
 
     @Override
-    public void showAutocompleteResults(List<AutocompleteResult> results) {
-        autocompleteListAdapter.clear();
-        autocompleteListAdapter.addAll(results);
-        autoCompleteTextView.showDropDown();
-    }
-
-    @Override
     public void updateMap(@NonNull PlacesModel placesModel) {
         autocompleteListAdapter.clear();
         Place currentPlace = placesModel.getCurrentPlace();
-        autoCompleteTextView.setText(currentPlace.name, false);
+        autoCompleteTextView.setText(currentPlace.address, false);
 
         googleMap.clear();
 
@@ -213,9 +208,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
             builder.include(latLng);
 
-            MarkerOptions markerOptions = new MarkerOptions().
-                    position(latLng).
-                    icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE));
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(latLng)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE))
+                    .title(place.name)
+                    .snippet(place.address);
 
             googleMap.addMarker(markerOptions);
         }
@@ -223,19 +220,27 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         LatLng latLng = new LatLng(currentPlace.lat, currentPlace.lon);
         builder.include(latLng);
 
-        MarkerOptions markerOptions = new MarkerOptions().
-                position(latLng).
-                icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        MarkerOptions markerOptions = new MarkerOptions()
+                .position(latLng)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                .title(currentPlace.name);
 
         googleMap.addMarker(markerOptions);
 
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
+        CameraUpdate cameraUpdate;
+
+        if (places.size() > 0) {
+            cameraUpdate = CameraUpdateFactory.newLatLngBounds(builder.build(), 100);
+        } else {
+            cameraUpdate = CameraUpdateFactory.newLatLng(latLng);
+        }
+
         googleMap.animateCamera(cameraUpdate);
     }
 
     @Override
     public void showLoading(boolean show) {
-
+        progressBar.setVisibility(show? View.VISIBLE : View.GONE);
     }
 
     protected void onStart() {

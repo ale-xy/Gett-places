@@ -14,4 +14,9 @@ public class AutocompleteResult {
         this.address = address;
         this.placeId = placeId;
     }
+
+    @Override
+    public String toString() {
+        return address;
+    }
 }
