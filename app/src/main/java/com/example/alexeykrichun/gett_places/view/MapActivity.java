@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -11,6 +12,7 @@ import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -145,6 +147,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                         return false;
                     }
                 });
+                getCurrentLocationAddress();
             } catch (SecurityException e) {
                 Log.e(LOG_TAG, "Location permission error " + e.getMessage());
             }
@@ -189,13 +192,30 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
     private void getCurrentLocationAddress() {
         try {
-            Location location = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+            Location location = getLastKnownLocation();
             if (location != null) {
                 presenter.selectPlaceFromCoords(location.getLatitude(), location.getLongitude());
             }
         } catch (SecurityException e) {
             Log.e(LOG_TAG, "Location permission error " + e.getMessage());
         }
+    }
+
+    private Location getLastKnownLocation() throws SecurityException{
+        LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
+        List<String> providers = locationManager.getProviders(true);
+        Location bestLocation = null;
+
+        for (String provider : providers) {
+            Location location = locationManager.getLastKnownLocation(provider);
+
+            if (location != null &&
+                    (bestLocation == null || location.getAccuracy() < bestLocation.getAccuracy())) {
+                bestLocation = location;
+            }
+        }
+        return bestLocation;
     }
 
     @Override
