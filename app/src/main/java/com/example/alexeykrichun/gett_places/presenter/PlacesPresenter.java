@@ -69,7 +69,7 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
             @Override
             public void placeDetailsResult(Place place) {
                 view.showLoading(false);
-                //todo show place details
+                view.showPlaceDetails(place);
             }
         });
     }

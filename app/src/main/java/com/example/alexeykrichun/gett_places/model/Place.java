@@ -11,7 +11,10 @@ public class Place {
     public final String name;
     public final String address;
 
-    //todo add data
+    private String website;
+    private String phone;
+    private double rating;
+
 
 
     public Place(double lat, double lon, String id, String name, String address) {
@@ -20,5 +23,29 @@ public class Place {
         this.id = id;
         this.name = name;
         this.address = address;
+    }
+
+    public String getWebsite() {
+        return website;
+    }
+
+    public void setWebsite(String website) {
+        this.website = website;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public double getRating() {
+        return rating;
+    }
+
+    public void setRating(double rating) {
+        this.rating = rating;
     }
 }

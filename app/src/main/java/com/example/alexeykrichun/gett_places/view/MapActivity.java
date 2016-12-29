@@ -7,6 +7,7 @@ import android.location.Location;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
@@ -60,6 +62,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
 
     private AutocompleteArrayAdapter autocompleteListAdapter;
 
+    private PlaceDetailsBottomSheet placeDetailsBottomSheet;
+
     private int radius = 1000; //todo add control
 
     @Override
@@ -101,6 +105,11 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
         });
 
         progressBar = (ProgressBar)findViewById(R.id.progress);
+        showLoading(false);
+
+        ViewGroup bottomSheetView = (ViewGroup) findViewById(R.id.place_bottom_sheet);
+        placeDetailsBottomSheet = new PlaceDetailsBottomSheet(bottomSheetView);
+        placeDetailsBottomSheet.hide();
     }
 
     private void setupGoogleApiClient() {
@@ -160,6 +169,25 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                 presenter.selectPlaceFromCoords(latLng.latitude, latLng.longitude);
             }
         });
+
+        googleMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                String id = (String)marker.getTag();
+                if (!TextUtils.isEmpty(id)) {
+                    presenter.getPlaceDetails(id);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (placeDetailsBottomSheet.getVisibilityState() != BottomSheetBehavior.STATE_HIDDEN) {
+            placeDetailsBottomSheet.hide();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void getCurrentLocationAddress() {
@@ -214,7 +242,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
                     .title(place.name)
                     .snippet(place.address);
 
-            googleMap.addMarker(markerOptions);
+            googleMap.addMarker(markerOptions).setTag(place.id);
         }
 
         LatLng latLng = new LatLng(currentPlace.lat, currentPlace.lon);
@@ -241,6 +269,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback,
     @Override
     public void showLoading(boolean show) {
         progressBar.setVisibility(show? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    public void showPlaceDetails(Place place) {
+        placeDetailsBottomSheet.setPlace(place);
+        placeDetailsBottomSheet.show();
     }
 
     protected void onStart() {

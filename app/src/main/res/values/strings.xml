@@ -2,4 +2,5 @@
     <string name="app_name">Gett-places</string>
     <string name="title_activity_map">Map</string>
     <string name="type_address">Type address</string>
+    <string name="rating">Rating:</string>
 </resources>

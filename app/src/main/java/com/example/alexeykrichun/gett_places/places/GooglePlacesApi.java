@@ -8,27 +8,41 @@ import com.example.alexeykrichun.gett_places.model.Place;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.maps.GeolocationApi;
 import com.google.maps.NearbySearchRequest;
 import com.google.maps.PlaceAutocompleteRequest;
 import com.google.maps.internal.DateTimeAdapter;
+import com.google.maps.internal.DayOfWeekAdaptor;
 import com.google.maps.internal.DistanceAdapter;
 import com.google.maps.internal.DurationAdapter;
+import com.google.maps.internal.FareAdapter;
+import com.google.maps.internal.GeolocationResponseAdapter;
+import com.google.maps.internal.InstantAdapter;
+import com.google.maps.internal.LatLngAdapter;
+import com.google.maps.internal.LocalTimeAdapter;
+import com.google.maps.internal.PriceLevelAdaptor;
 import com.google.maps.internal.SafeEnumAdapter;
 import com.google.maps.model.AddressComponentType;
 import com.google.maps.model.AddressType;
 import com.google.maps.model.AutocompletePrediction;
 import com.google.maps.model.Distance;
 import com.google.maps.model.Duration;
+import com.google.maps.model.Fare;
 import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
 import com.google.maps.model.LocationType;
+import com.google.maps.model.OpeningHours;
 import com.google.maps.model.PlaceDetails;
 import com.google.maps.model.PlacesSearchResult;
+import com.google.maps.model.PriceLevel;
 import com.google.maps.model.TravelMode;
 
 import org.joda.time.DateTime;
+import org.joda.time.Instant;
+import org.joda.time.LocalTime;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,11 +72,19 @@ public class GooglePlacesApi implements PlacesApi {
                 .registerTypeAdapter(DateTime.class, new DateTimeAdapter())
                 .registerTypeAdapter(Distance.class, new DistanceAdapter())
                 .registerTypeAdapter(Duration.class, new DurationAdapter())
+                .registerTypeAdapter(Fare.class, new FareAdapter())
+                .registerTypeAdapter(LatLng.class, new LatLngAdapter())
                 .registerTypeAdapter(AddressComponentType.class,
-                        new SafeEnumAdapter<>(AddressComponentType.UNKNOWN))
-                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<>(AddressType.UNKNOWN))
-                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<>(TravelMode.UNKNOWN))
-                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<>(LocationType.UNKNOWN))
+                        new SafeEnumAdapter<AddressComponentType>(AddressComponentType.UNKNOWN))
+                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<AddressType>(AddressType.UNKNOWN))
+                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<TravelMode>(TravelMode.UNKNOWN))
+                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<LocationType>(LocationType.UNKNOWN))
+                .registerTypeAdapter(PlaceDetails.Review.AspectRating.RatingType.class, new SafeEnumAdapter<PlaceDetails.Review.AspectRating.RatingType>(PlaceDetails.Review.AspectRating.RatingType.UNKNOWN))
+                .registerTypeAdapter(OpeningHours.Period.OpenClose.DayOfWeek.class, new DayOfWeekAdaptor())
+                .registerTypeAdapter(PriceLevel.class, new PriceLevelAdaptor())
+                .registerTypeAdapter(Instant.class, new InstantAdapter())
+                .registerTypeAdapter(LocalTime.class, new LocalTimeAdapter())
+                .registerTypeAdapter(GeolocationApi.Response.class, new GeolocationResponseAdapter())
                 .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
                 .create();
 
@@ -115,6 +137,13 @@ public class GooglePlacesApi implements PlacesApi {
                     String id = placesSearchResult.placeId;
                     String name = placesSearchResult.name;
                     Place result = new Place(location.lat, location.lng, id, name, address);
+                    result.setPhone(placesSearchResult.formattedPhoneNumber);
+                    URL website = placesSearchResult.website;
+                    if (website != null) {
+                        result.setWebsite(website.toString());
+                    }
+                    result.setRating(placesSearchResult.rating);
+
                     callback.placeDetailsResult(result);
                 }
                 //todo not found

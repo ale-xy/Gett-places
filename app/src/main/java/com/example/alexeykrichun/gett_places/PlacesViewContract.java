@@ -14,6 +14,7 @@ public interface PlacesViewContract {
     interface View {
         void updateMap(PlacesModel placesModel);
         void showLoading(boolean show);
+        void showPlaceDetails(Place place);
     }
 
     interface Presenter {
