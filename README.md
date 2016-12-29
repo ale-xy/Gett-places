@@ -17,7 +17,7 @@ Extra: show place details on marker tooltip click.
 
 * Prettify UI
 * Add tests
-* Add error processing
+* Add error processing (currently it just prints error in the log)
 * Add screen rotation support
 * Add location update instead of using last known location
 * Fix map marker blinking on places update
