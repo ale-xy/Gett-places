@@ -37,7 +37,9 @@ public class AutocompleteArrayAdapter extends ArrayAdapter<AutocompleteResult> i
             convertView = LayoutInflater.from(getContext()).inflate(android.R.layout.simple_list_item_1, parent, false);
         }
 
-        ((TextView)convertView).setText(place.address);
+        if (place != null) {
+            ((TextView) convertView).setText(place.address);
+        }
         return convertView;
     }
 

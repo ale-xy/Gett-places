@@ -75,11 +75,11 @@ public class GooglePlacesApi implements PlacesApi {
                 .registerTypeAdapter(Fare.class, new FareAdapter())
                 .registerTypeAdapter(LatLng.class, new LatLngAdapter())
                 .registerTypeAdapter(AddressComponentType.class,
-                        new SafeEnumAdapter<AddressComponentType>(AddressComponentType.UNKNOWN))
-                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<AddressType>(AddressType.UNKNOWN))
-                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<TravelMode>(TravelMode.UNKNOWN))
-                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<LocationType>(LocationType.UNKNOWN))
-                .registerTypeAdapter(PlaceDetails.Review.AspectRating.RatingType.class, new SafeEnumAdapter<PlaceDetails.Review.AspectRating.RatingType>(PlaceDetails.Review.AspectRating.RatingType.UNKNOWN))
+                        new SafeEnumAdapter<>(AddressComponentType.UNKNOWN))
+                .registerTypeAdapter(AddressType.class, new SafeEnumAdapter<>(AddressType.UNKNOWN))
+                .registerTypeAdapter(TravelMode.class, new SafeEnumAdapter<>(TravelMode.UNKNOWN))
+                .registerTypeAdapter(LocationType.class, new SafeEnumAdapter<>(LocationType.UNKNOWN))
+                .registerTypeAdapter(PlaceDetails.Review.AspectRating.RatingType.class, new SafeEnumAdapter<>(PlaceDetails.Review.AspectRating.RatingType.UNKNOWN))
                 .registerTypeAdapter(OpeningHours.Period.OpenClose.DayOfWeek.class, new DayOfWeekAdaptor())
                 .registerTypeAdapter(PriceLevel.class, new PriceLevelAdaptor())
                 .registerTypeAdapter(Instant.class, new InstantAdapter())
@@ -161,8 +161,7 @@ public class GooglePlacesApi implements PlacesApi {
     public List<AutocompleteResult> getAutocompletePredictionsSync(String input) {
         try {
             Response<PlaceAutocompleteRequest.Response> response = mapsApi.getAutocompletePredictions(googleMapsKey, input).execute();
-            ArrayList<AutocompleteResult> results = parseAutocompleteResults(response);
-            return results;
+            return parseAutocompleteResults(response);
         } catch (IOException e) {
             Log.e("GooglePlacesApi", e.getLocalizedMessage());
         }

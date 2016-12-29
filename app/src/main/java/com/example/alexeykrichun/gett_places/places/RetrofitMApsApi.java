@@ -2,7 +2,6 @@ package com.example.alexeykrichun.gett_places.places;
 
 import com.google.maps.NearbySearchRequest;
 import com.google.maps.PlaceAutocompleteRequest;
-import com.google.maps.PlaceDetailsRequest;
 
 import retrofit2.Call;
 import retrofit2.http.GET;

@@ -1,12 +1,12 @@
 package com.example.alexeykrichun.gett_places.view;
 
+import android.annotation.SuppressLint;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.example.alexeykrichun.gett_places.PlacesViewContract;
 import com.example.alexeykrichun.gett_places.R;
 import com.example.alexeykrichun.gett_places.model.Place;
 
@@ -15,18 +15,16 @@ import com.example.alexeykrichun.gett_places.model.Place;
  */
 
 public class PlaceDetailsBottomSheet {
-    private final ViewGroup baseView;
-    private BottomSheetBehavior bottomSheetBehavior;
+    private final BottomSheetBehavior bottomSheetBehavior;
 
-    TextView name;
-    TextView address;
-    TextView phone;
-    TextView rating;
-    TextView website;
-    View ratingLine;
+    final TextView name;
+    final TextView address;
+    final TextView phone;
+    final TextView rating;
+    final TextView website;
+    final View ratingLine;
 
     public PlaceDetailsBottomSheet(@NonNull ViewGroup baseView) {
-        this.baseView = baseView;
         bottomSheetBehavior = BottomSheetBehavior.from(baseView);
 
         name = (TextView)baseView.findViewById(R.id.details_title);
@@ -37,6 +35,7 @@ public class PlaceDetailsBottomSheet {
         ratingLine = baseView.findViewById(R.id.rating_line);
     }
 
+    @SuppressLint("DefaultLocale")
     public void setPlace(Place place) {
         name.setText(place.name);
         address.setText(place.address);
