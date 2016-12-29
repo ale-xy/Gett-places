@@ -115,12 +115,13 @@ public class GooglePlacesApi implements PlacesApi {
                     Place place = new Place(result.geometry.location.lat, result.geometry.location.lng, result.placeId, result.name, result.formattedAddress);
                     places.add(place);
                 }
-                callback.nearbyPlacesResult(places);
+                callback.onSuccess(places);
             }
 
             @Override
             public void onFailure(Call<NearbySearchRequest.Response> call, Throwable t) {
                 Log.e("GooglePlacesApi", t.getLocalizedMessage());
+                callback.onError(t);
             }
         });
     }
@@ -144,7 +145,7 @@ public class GooglePlacesApi implements PlacesApi {
                     }
                     result.setRating(placesSearchResult.rating);
 
-                    callback.placeDetailsResult(result);
+                    callback.onSuccess(result);
                 }
                 //todo not found
 
@@ -153,6 +154,7 @@ public class GooglePlacesApi implements PlacesApi {
             @Override
             public void onFailure(Call<PlaceDetailsResponse> call, Throwable t) {
                 Log.e("GooglePlacesApi", t.getLocalizedMessage());
+                callback.onError(t);
             }
         });
     }
@@ -192,13 +194,14 @@ public class GooglePlacesApi implements PlacesApi {
                     String id = geocodingResult.placeId;
                     Place result = new Place(location.lat, location.lng, id, address, address);
 
-                    callback.reverseGeocodingResult(result);
+                    callback.onSuccess(result);
                 }
             }
 
             @Override
             public void onFailure(Call<GeocodingApiResponse> call, Throwable t) {
                 Log.e("GooglePlacesApi", t.getLocalizedMessage());
+                callback.onError(t);
             }
         });
     }

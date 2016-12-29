@@ -37,12 +37,17 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
         view.showLoading(true);
         placesApi.getReverseGeocoding(lat, lon, new PlacesApi.ReverseGeocodingCallback() {
             @Override
-            public void reverseGeocodingResult(Place place) {
+            public void onSuccess(Place place) {
                 view.showLoading(false);
                 placesModel.clearPlaces();
                 placesModel.setCurrentPlace(place);
                 view.updateMap(placesModel);
                 getNearbyPlaces();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                view.showLoading(false);
             }
         });
     }
@@ -53,13 +58,18 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
                 placesModel.getCurrentPlace().lon,
                 placesModel.getRadius(),
                 new PlacesApi.GetNearbyPlacesCallback() {
-            @Override
-            public void nearbyPlacesResult(List<Place> places) {
-                view.showLoading(false);
-                placesModel.setPlaces(places);
-                view.updateMap(placesModel);
-            }
-        });
+                    @Override
+                    public void onSuccess(List<Place> places) {
+                        view.showLoading(false);
+                        placesModel.setPlaces(places);
+                        view.updateMap(placesModel);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        view.showLoading(false);
+                    }
+                });
     }
 
     @Override
@@ -67,9 +77,14 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
         view.showLoading(true);
         placesApi.getPlaceDetails(placeId, new PlacesApi.GetPlaceDetailsCallback() {
             @Override
-            public void placeDetailsResult(Place place) {
+            public void onSuccess(Place place) {
                 view.showLoading(false);
                 view.showPlaceDetails(place);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                view.showLoading(false);
             }
         });
     }
@@ -95,12 +110,17 @@ public class PlacesPresenter implements PlacesViewContract.Presenter {
         view.showLoading(true);
         placesApi.getPlaceDetails(placeId, new PlacesApi.GetPlaceDetailsCallback() {
             @Override
-            public void placeDetailsResult(Place place) {
+            public void onSuccess(Place place) {
                 view.showLoading(false);
                 placesModel.clearPlaces();
                 placesModel.setCurrentPlace(place);
                 view.updateMap(placesModel);
                 getNearbyPlaces();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                view.showLoading(false);
             }
         });
     }
